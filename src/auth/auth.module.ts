@@ -1,48 +1,49 @@
 import { Module, Scope } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 
 import { AuthService } from './services/auth.service';
 import { UserService } from './services/user.service';
-import { AuthController } from './controllers/auth.controller';
-import { UserController } from './controllers/user.controller';
-import { JwtStrategy } from './strategies/jwt.strategy';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { PermissionsController } from './controllers/permission.controller';
-import { RolesController } from './controllers/roles.controller';
 import { RolesService } from './services/roles.service';
 import { PermissionsService } from './services/permissions.service';
-import { APP_GUARD } from '@nestjs/core';
+
+import { AuthController } from './controllers/auth.controller';
+import { UserController } from './controllers/user.controller';
+import { RolesController } from './controllers/roles.controller';
+import { PermissionsController } from './controllers/permission.controller';
+
+import { JwtStrategy } from './strategies/jwt.strategy';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 
 @Module({
   imports: [
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1d' },
+    PassportModule.register({ defaultStrategy: 'jwt', session: false }),
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        secret: cfg.get<string>('config.jwtSecret'),
+        signOptions: { expiresIn: '1d' },
+      }),
     }),
   ],
   providers: [
     AuthService,
     {
       provide: UserService,
-      scope: Scope.REQUEST,
       useClass: UserService,
+      scope: Scope.REQUEST,
     },
     RolesService,
     PermissionsService,
     JwtStrategy,
     JwtAuthGuard,
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: PermissionsGuard,
-    },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
   ],
   controllers: [
     AuthController,
@@ -50,6 +51,6 @@ import { PermissionsGuard } from './guards/permissions.guard';
     RolesController,
     PermissionsController,
   ],
-  exports: [JwtAuthGuard, AuthService],
+  exports: [AuthService],
 })
 export class AuthModule {}
