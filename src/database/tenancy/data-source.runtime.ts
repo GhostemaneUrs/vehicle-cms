@@ -1,7 +1,12 @@
 import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
-import * as glob from 'glob';
-import { resolve } from 'path';
+import { User } from '../../auth/entities/user.entity';
+import { Role } from '../../auth/entities/roles.entity';
+import { Permission } from '../../auth/entities/permissions.entity';
+import { Project } from '../../projects/entities/project.entity';
+import { Organizational } from '../../organizational/entities/organizational.entity';
+import { Transfer } from '../../transfers/entities/transfer.entity';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity';
 
 dotenv.config();
 
@@ -17,7 +22,15 @@ export function createTenantDataSourceRuntime(schema: string): DataSource {
     schema,
     synchronize: false,
     logging: false,
-    entities: glob.sync(resolve(__dirname, '../../**/*.entity.{js,ts}')),
+    entities: [
+      User,
+      Role,
+      Permission,
+      Project,
+      Organizational,
+      Transfer,
+      Vehicle,
+    ],
     migrations: [],
   };
   return new DataSource(opts);

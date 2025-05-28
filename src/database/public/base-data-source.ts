@@ -4,6 +4,14 @@ import { join, resolve } from 'path';
 import * as glob from 'glob';
 dotenv.config();
 
+const allEntityFiles = glob.sync(
+  resolve(__dirname, '../../**/*.entity.{ts,js}'),
+);
+
+const tenancyEntityFiles = allEntityFiles.filter((f) =>
+  /tenancy[\/\\]entities[\/\\].*\.entity\.(ts|js)$/.test(f),
+);
+
 export const PublicDataSource = new DataSource({
   type: 'postgres',
   host: process.env.POSTGRES_HOST,
@@ -14,10 +22,9 @@ export const PublicDataSource = new DataSource({
   schema: 'public',
   synchronize: false,
   logging: false,
-  entities: glob.sync(resolve(__dirname, '../../**/*.entity.{ts,js}')),
+  entities: tenancyEntityFiles,
   migrations: [
     join(process.cwd(), 'src/database/general-migrations/*.{ts,js}'),
-    join(process.cwd(), 'dist/database/general-migrations/*.js'),
   ],
   migrationsTableName: 'migrations',
 });

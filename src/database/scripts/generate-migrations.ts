@@ -4,8 +4,10 @@ import PublicDataSource from '../public/base-data-source.cli';
 
 async function main() {
   await PublicDataSource.initialize();
-  console.log('\n⏳ Generating GENERAL (public) migrations');
-  const generalName = `InitTenancyTable_${Date.now()}`;
+
+  console.log(`\n⏳ Generating GENERAL (public) migrations`);
+
+  const generalName = `migration`;
   spawnSync(
     'npx',
     [
@@ -19,15 +21,18 @@ async function main() {
   );
 
   const tenants: { name: string }[] = await PublicDataSource.query(
-    'SELECT name FROM tenancy',
+    `SELECT name FROM tenancy`,
   );
+
   for (const { name } of tenants) {
     const schema = `t_${name}`;
     console.log(`\n⏳ Generating TENANT "${schema}" migrations`);
+
     spawnSync('mkdir', ['-p', `src/database/migrations/${schema}`], {
       stdio: 'inherit',
       shell: true,
     });
+
     spawnSync(
       'npx',
       [
@@ -48,6 +53,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error('Error during migration generation:', err);
   process.exit(1);
 });

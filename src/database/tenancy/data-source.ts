@@ -1,15 +1,21 @@
-// src/database/tenancy/data-source.ts
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import * as glob from 'glob';
-import { join, resolve } from 'path';
+import { resolve, join } from 'path';
 dotenv.config();
 
 export function createTenantDataSource(
   schema: string,
   includeMigrations = false,
 ): DataSource {
+  const baseMigrationsDir = resolve(__dirname, '../../database/migrations');
+  const migrationFiles = includeMigrations
+    ? glob.sync(join(baseMigrationsDir, schema, '*.{ts,js}'))
+    : [];
+
+  console.log(`→ Cargando migraciones para ${schema}:`, migrationFiles);
+
   const opts: DataSourceOptions = {
     type: 'postgres',
     host: process.env.POSTGRES_HOST,
@@ -21,12 +27,7 @@ export function createTenantDataSource(
     synchronize: false,
     logging: false,
     entities: glob.sync(resolve(__dirname, '../../**/*.entity.{ts,js}')),
-    migrations: includeMigrations
-      ? [
-          join(process.cwd(), `src/database/migrations/${schema}/*.{ts,js}`),
-          join(process.cwd(), `dist/database/migrations/${schema}/*.js`),
-        ]
-      : [],
+    migrations: migrationFiles,
     migrationsTableName: 'migrations',
   };
   return new DataSource(opts);

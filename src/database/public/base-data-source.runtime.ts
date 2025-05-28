@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
-import { resolve } from 'path';
-import * as glob from 'glob';
+import { Tenancy } from '../../tenancy/entities/tenancy.entity';
 dotenv.config();
 
 export const PublicDataSourceRuntime = new DataSource({
@@ -14,6 +13,6 @@ export const PublicDataSourceRuntime = new DataSource({
   schema: 'public',
   synchronize: false,
   logging: false,
-  entities: glob.sync(resolve(__dirname, '../../**/*.entity.{ts,js}')),
+  entities: [Tenancy],
   migrations: [],
 });
