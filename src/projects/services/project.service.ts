@@ -38,18 +38,13 @@ export class ProjectService {
     return projects.map((project) => plainToClass(ReadProjectDto, project));
   }
 
-  async findOne(id: string, user: User): Promise<ReadProjectDto> {
+  async findOne(id: string): Promise<ReadProjectDto> {
     const project = await this.projectRepository.findOne({
       where: { id },
       relations: ['users'],
     });
 
     if (!project) throw new NotFoundException('Project not found');
-
-    if (!project.users.some((u) => u.id === user.id))
-      throw new ForbiddenException(
-        'You are not allowed to access this project',
-      );
 
     return plainToClass(ReadProjectDto, project);
   }
@@ -86,11 +81,7 @@ export class ProjectService {
     }
   }
 
-  async update(
-    id: string,
-    data: UpdateProjectDto,
-    user: User,
-  ): Promise<ReadProjectDto> {
+  async update(id: string, data: UpdateProjectDto): Promise<ReadProjectDto> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -102,11 +93,6 @@ export class ProjectService {
       });
 
       if (!project) throw new NotFoundException('Project not found');
-
-      if (!project.users.some((u) => u.id === user.id))
-        throw new ForbiddenException(
-          'You are not allowed to update this project',
-        );
 
       if (data.name !== project.name) {
         const projectWithSameName = await queryRunner.manager.findOne(Project, {
@@ -137,7 +123,7 @@ export class ProjectService {
     }
   }
 
-  async remove(id: string, user: User): Promise<{ message: string }> {
+  async remove(id: string): Promise<{ message: string }> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -150,11 +136,6 @@ export class ProjectService {
 
       if (!project) throw new NotFoundException('Project not found');
 
-      if (!project.users.some((u) => u.id === user.id))
-        throw new ForbiddenException(
-          'You are not allowed to delete this project',
-        );
-
       await queryRunner.manager.remove(project);
       await queryRunner.commitTransaction();
       return { message: 'Project deleted successfully' };
@@ -164,5 +145,14 @@ export class ProjectService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async userHasAccess(userId: string, projectId: string): Promise<boolean> {
+    const proj = await this.projectRepository.findOne({
+      where: { id: projectId },
+      relations: ['users'],
+    });
+
+    return !!proj && proj.users.some((u) => u.id === userId);
   }
 }

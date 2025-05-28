@@ -26,6 +26,7 @@ import {
   ApiOkResponse,
   ApiOperation,
 } from '@nestjs/swagger';
+import { ResourceAccess } from '../../auth/decorators/resource-access.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('projects')
@@ -57,27 +58,26 @@ export class ProjectsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get a project by id' })
   @ApiOkResponse({ type: ReadProjectDto })
-  findOne(@Param('id') id: string, @USER_INFO() user: User) {
-    return this.projectsService.findOne(id, user);
+  @ResourceAccess({ projectProp: 'id' })
+  findOne(@Param('id') id: string) {
+    return this.projectsService.findOne(id);
   }
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a project by id' })
   @ApiOkResponse({ type: ReadProjectDto })
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateProjectDto,
-    @USER_INFO() user: User,
-  ) {
-    return this.projectsService.update(id, dto, user);
+  @ResourceAccess({ projectProp: 'id' })
+  update(@Param('id') id: string, @Body() values: UpdateProjectDto) {
+    return this.projectsService.update(id, values);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a project by id' })
   @ApiNoContentResponse()
-  remove(@Param('id') id: string, @USER_INFO() user: User) {
-    return this.projectsService.remove(id, user);
+  @ResourceAccess({ projectProp: 'id' })
+  remove(@Param('id') id: string) {
+    return this.projectsService.remove(id);
   }
 }
