@@ -25,7 +25,7 @@ import {
 } from '@nestjs/swagger';
 import { plainToClass } from 'class-transformer';
 import { ConfigService } from '@nestjs/config';
-import { Public } from '../../common/public.decorator';
+import { Public } from '../decorators/public.decorator';
 
 @Public()
 @ApiTags('Auth')

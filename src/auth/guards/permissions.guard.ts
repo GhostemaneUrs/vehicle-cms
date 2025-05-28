@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { PERMISSIONS_KEY } from '../../common/permission.decorator';
+import { PERMISSIONS_KEY } from '../decorators/permission.decorator';
 import { Request } from 'express';
 import { JwtPayload } from '../../@types/express';
 

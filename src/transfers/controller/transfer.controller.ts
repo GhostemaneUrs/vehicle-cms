@@ -20,16 +20,24 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { USER_INFO } from '../../auth/decorators/user.decorator';
 import { User } from '../../auth/entities/user.entity';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiHeader, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { TransferPermissions } from '../../auth/enums/transfer-permissions.enum';
+import { Permissions } from '../../auth/decorators/permission.decorator';
 
 @Controller('transfers')
 @UseGuards(JwtAuthGuard)
+@ApiHeader({
+  name: 'x-tenant-id',
+  description: 'Tenant identifier (schema name)',
+  required: true,
+})
 export class TransferController {
   constructor(private readonly transferService: TransferService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all transfers' })
+  @Permissions(TransferPermissions.VIEW)
   @ApiResponse({
     status: 200,
     description: 'Returns all transfers',
@@ -42,6 +50,7 @@ export class TransferController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get a transfer by id' })
+  @Permissions(TransferPermissions.VIEW)
   @ApiResponse({
     status: 200,
     description: 'Returns a transfer',
@@ -57,6 +66,7 @@ export class TransferController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a transfer' })
+  @Permissions(TransferPermissions.CREATE)
   @ApiResponse({
     status: 201,
     description: 'Returns the created transfer',
@@ -72,6 +82,7 @@ export class TransferController {
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update a transfer' })
+  @Permissions(TransferPermissions.EDIT)
   @ApiResponse({
     status: 200,
     description: 'Returns the updated transfer',
@@ -88,6 +99,7 @@ export class TransferController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a transfer' })
+  @Permissions(TransferPermissions.DELETE)
   @ApiResponse({
     status: 200,
     description: 'Returns the deleted transfer',

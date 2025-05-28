@@ -127,7 +127,7 @@ export class TransferService {
     try {
       const project = await queryRunner.manager.findOne(Project, {
         where: { id: data.projectId },
-        relations: ['users'],
+        relations: ['users', 'organizational'],
       });
 
       if (!project) throw new NotFoundException('Project not found');
