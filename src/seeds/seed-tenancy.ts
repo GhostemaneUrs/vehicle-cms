@@ -29,3 +29,15 @@ export async function seedTenancy(): Promise<void> {
   console.log(`✅  Tenant "${tenantName}" semillado y schema listo.`);
   await PublicDataSourceRuntime.destroy();
 }
+
+if (require.main === module) {
+  seedTenancy()
+    .then(() => {
+      console.log('✅ seed-tenancy.js completado.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('❌ Error en seed-tenancy.js:', err);
+      process.exit(1);
+    });
+}

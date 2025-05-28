@@ -58,6 +58,16 @@ export async function seedRolesPermissions() {
   }
 
   await PublicDataSourceRuntime.destroy();
-  console.log('\n🎉 All tenants seeded.');
-  process.exit(0);
+}
+
+if (require.main === module) {
+  seedRolesPermissions()
+    .then(() => {
+      console.log('✅ seed-roles-permissions.js completado.');
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('❌ Error en seed-roles-permissions.js:', err);
+      process.exit(1);
+    });
 }

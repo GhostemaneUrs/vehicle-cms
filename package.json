@@ -2,20 +2,21 @@
   "name": "cms-transfers-multitenancy",
   "version": "1.0.0",
   "scripts": {
-    "prebuild": "rimraf dist",
+    "prebuild": "rm -rf dist",
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
-
+    "start:prod": "node dist/main.js",
     "db:migrate": "ts-node -r tsconfig-paths/register src/database/scripts/migrate.ts up",
     "db:rollback": "ts-node -r tsconfig-paths/register src/database/scripts/migrate.ts down",
-    "db:seed": "ts-node -r tsconfig-paths/register src/seeds/index.ts",
-    "start:prod": "node dist/main.js",
+    "db:seed-tenancy": "ts-node -r tsconfig-paths/register src/seeds/seed-tenancy.ts",
+    "db:seed-roles": "ts-node -r tsconfig-paths/register src/seeds/seed-roles-permissions.ts",
     "db:migrate:prod": "node dist/database/scripts/migrate.js up",
     "db:rollback:prod": "node dist/database/scripts/migrate.js down",
-
+    "db:seed-tenancy:prod": "node dist/seeds/seed-tenancy.js",
+    "db:seed-roles:prod": "node dist/seeds/seed-roles-permissions.js",
     "docker:up": "docker compose up --build",
+    "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "test": "jest"
   },
