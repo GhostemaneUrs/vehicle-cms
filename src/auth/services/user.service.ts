@@ -114,8 +114,6 @@ export class UserService {
       relations: ['roles', 'roles.permissions'],
     });
 
-    console.log('🚀 ~ UserService ~ findByUsername ~ user:', user.roles);
-
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
