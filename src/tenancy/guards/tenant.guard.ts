@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { IS_PUBLIC_KEY } from '../../common/public.decorator';
+import { IS_PUBLIC_KEY } from '../../auth/decorators/public.decorator';
 import { PublicDataSourceRuntime as PublicDataSource } from '../../database/public/base-data-source.runtime';
 import { createTenantDataSourceRuntime as createTenantDataSource } from '../../database/tenancy/data-source.runtime';
 import { Tenancy } from '../entities/tenancy.entity';

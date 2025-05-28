@@ -17,6 +17,8 @@ import { VehicleModule } from './vehicles/vehicle.module';
 import { ProjectModule } from './projects/project.module';
 import { OrganizationalModule } from './organizational/organizational.module';
 import { TransferModule } from './transfers/transfer.module';
+import { ResourceAccessGuard } from './auth/guards/resource-access.guard';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
@@ -33,6 +35,10 @@ import { TransferModule } from './transfers/transfer.module';
     {
       provide: APP_GUARD,
       useClass: TenantGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ResourceAccessGuard,
     },
   ],
 })

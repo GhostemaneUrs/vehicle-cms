@@ -1,10 +1,10 @@
 import { Module, Global } from '@nestjs/common';
-import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
-import { Tenancy } from '../tenancy/entities/tenancy.entity';
 import { TenantConnectionProvider } from './tenancy/tenant-connection.provider';
 import { TENANT_CONNECTION } from './common/database.tokens';
+import { Tenancy } from '../tenancy/entities/tenancy.entity';
 
 @Global()
 @Module({

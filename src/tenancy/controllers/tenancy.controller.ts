@@ -22,7 +22,7 @@ import {
   ReadTenantDto,
   UpdateTenantDto,
 } from '../dtos/tenancy.dto';
-import { Public } from '../../common/public.decorator';
+import { Public } from '../../auth/decorators/public.decorator';
 import { plainToClass } from 'class-transformer';
 
 @ApiTags('Tenancy')
