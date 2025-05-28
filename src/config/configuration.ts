@@ -2,13 +2,18 @@ import { registerAs } from '@nestjs/config';
 
 export default registerAs('config', () => ({
   db: {
-    host: process.env.POSTGRES_HOST, // Postgres host
-    port: parseInt(process.env.POSTGRES_PORT, 10) || 5432, // Postgres port
-    user: process.env.POSTGRES_USER, // Postgres user
-    pass: process.env.POSTGRES_PASSWORD, // Postgres password
-    name: process.env.POSTGRES_DB, // Postgres database name
+    host: process.env.POSTGRES_HOST,
+    port: parseInt(process.env.POSTGRES_PORT, 10) || 5432,
+    user: process.env.POSTGRES_USER,
+    pass: process.env.POSTGRES_PASSWORD,
+    name: process.env.POSTGRES_DB,
   },
-  jwtSecret: process.env.JWT_SECRET, // JWT signing secret
-  port: parseInt(process.env.PORT, 10) || 3000, // Application listening port
-  tenancy: process.env.TENANCY as string, // Current tenant identifier (schema)
+  jwt: {
+    accessSecret: process.env.ACCESS_TOKEN_SECRET,
+    refreshSecret: process.env.REFRESH_TOKEN_SECRET,
+    accessExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN,
+    refreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN,
+  },
+  port: parseInt(process.env.PORT, 10) || 3000,
+  tenancy: process.env.TENANCY,
 }));

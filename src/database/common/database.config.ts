@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { Tenancy } from '../../tenancy/entities/tenancy.entity';
 
 export function commonConfigFactory(cfg: ConfigService): DataSourceOptions {
-  console.log('🚀 ~ commonConfigFactory ~ cfg:', cfg);
   return {
     type: 'postgres',
     host: cfg.get<string>('config.db.host'),

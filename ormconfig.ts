@@ -1,4 +1,5 @@
 import { DataSourceOptions } from 'typeorm';
-import { commonConfig } from './src/database/database.config';
+import { commonConfigFactory } from './src/database/common/database.config';
+import { ConfigService } from '@nestjs/config';
 
-export default commonConfig as DataSourceOptions;
+export default commonConfigFactory(new ConfigService()) as DataSourceOptions;
