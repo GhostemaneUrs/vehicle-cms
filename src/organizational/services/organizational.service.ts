@@ -77,14 +77,24 @@ export class OrganizationalService {
     try {
       const project = await queryRunner.manager.findOne(Project, {
         where: { id: data.projectId },
-        relations: ['users'],
+        relations: ['organizational'],
       });
 
       if (!project) throw new NotFoundException('Project not found');
 
-      if (!project.users.some((u) => u.id === user.id)) {
-        throw new ForbiddenException(
-          `You are not allowed to create an organizational in this project ${project.name}`,
+      const existingOrganizational = queryRunner.manager.findOne(
+        Organizational,
+        {
+          where: {
+            name: data.name,
+            project: { id: data.projectId },
+          },
+        },
+      );
+
+      if (existingOrganizational) {
+        throw new BadRequestException(
+          'Organizational with this name already exists',
         );
       }
 
@@ -118,17 +128,11 @@ export class OrganizationalService {
     try {
       const organizational = await this.organizationalRepository.findOne({
         where: { id },
-        relations: ['project', 'project.users'],
+        relations: ['project'],
       });
 
       if (!organizational)
         throw new NotFoundException('Organizational not found');
-
-      if (!organizational.project.users.some((u) => u.id === user.id)) {
-        throw new ForbiddenException(
-          `You are not allowed to update this organizational ${organizational.name} in project ${organizational.project.name}`,
-        );
-      }
 
       if (data.name !== organizational.name) {
         organizational.name = data.name;
@@ -167,17 +171,11 @@ export class OrganizationalService {
     try {
       const organizational = await this.organizationalRepository.findOne({
         where: { id },
-        relations: ['project', 'project.users'],
+        relations: ['project'],
       });
 
       if (!organizational)
         throw new NotFoundException('Organizational not found');
-
-      if (!organizational.project.users.some((u) => u.id === user.id)) {
-        throw new ForbiddenException(
-          `You are not allowed to remove this organizational ${organizational.name} in project ${organizational.project.name}`,
-        );
-      }
 
       await queryRunner.manager.remove(organizational);
       await queryRunner.commitTransaction();
@@ -234,5 +232,19 @@ export class OrganizationalService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async userHasAccess(
+    userId: string,
+    organizationalId: string,
+  ): Promise<boolean> {
+    const organizational = await this.organizationalRepository.findOne({
+      where: { id: organizationalId },
+      relations: ['users'],
+    });
+
+    return (
+      !!organizational && organizational.users.some((u) => u.id === userId)
+    );
   }
 }

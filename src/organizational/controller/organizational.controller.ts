@@ -20,17 +20,24 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { USER_INFO } from '../../auth/decorators/user.decorator';
 import { User } from '../../auth/entities/user.entity';
-import { ApiResponse } from '@nestjs/swagger';
+import { ApiHeader, ApiResponse } from '@nestjs/swagger';
 import { ApiOperation } from '@nestjs/swagger';
+import { ResourceAccess } from '../../auth/decorators/resource-access.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('organizational')
+@ApiHeader({
+  name: 'x-tenant-id',
+  description: 'Tenant identifier (schema name)',
+  required: true,
+})
 export class OrganizationalController {
   constructor(private readonly organizationalService: OrganizationalService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all organizational units' })
+  @ResourceAccess({ projectProp: 'id' })
   @ApiResponse({
     status: 200,
     description: 'Returns all organizational units',
@@ -45,6 +52,7 @@ export class OrganizationalController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get an organizational unit by id' })
+  @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
     description: 'Returns an organizational unit',
@@ -57,6 +65,7 @@ export class OrganizationalController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create an organizational unit' })
+  @ResourceAccess({ projectProp: 'id' })
   @ApiResponse({
     status: 201,
     description: 'Returns the created organizational unit',
@@ -72,6 +81,7 @@ export class OrganizationalController {
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update an organizational unit' })
+  @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
     description: 'Returns the updated organizational unit',
@@ -88,6 +98,7 @@ export class OrganizationalController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete an organizational unit' })
+  @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
     description:
@@ -112,6 +123,7 @@ export class OrganizationalController {
   @Post(':id/users')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Assign a user to an organizational unit' })
+  @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
     description:
