@@ -17,7 +17,7 @@ import { VehicleModule } from './vehicles/vehicle.module';
 import { ProjectModule } from './projects/project.module';
 import { OrganizationalModule } from './organizational/organizational.module';
 import { TransferModule } from './transfers/transfer.module';
-import { ResourceAccessGuard } from './auth/guards/resource-access.guard';
+import { SharedAuthModule } from './auth/shared-auth.module';
 
 @Module({
   imports: [
@@ -29,16 +29,13 @@ import { ResourceAccessGuard } from './auth/guards/resource-access.guard';
     ProjectModule,
     OrganizationalModule,
     TransferModule,
+    SharedAuthModule,
     ThrottlerModule.forRoot([{ ttl: 60, limit: 20 }]),
   ],
   providers: [
     {
       provide: APP_GUARD,
       useClass: TenantGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: ResourceAccessGuard,
     },
   ],
 })

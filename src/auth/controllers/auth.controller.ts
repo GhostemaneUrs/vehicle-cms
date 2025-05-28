@@ -22,6 +22,7 @@ import {
   ApiOkResponse,
   ApiCreatedResponse,
   ApiCookieAuth,
+  ApiHeader,
 } from '@nestjs/swagger';
 import { plainToClass } from 'class-transformer';
 import { ConfigService } from '@nestjs/config';
@@ -30,6 +31,11 @@ import { Public } from '../decorators/public.decorator';
 @Public()
 @ApiTags('Auth')
 @Controller('auth')
+@ApiHeader({
+  name: 'x-tenant-id',
+  description: 'Tenant identifier (schema name)',
+  required: true,
+})
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
