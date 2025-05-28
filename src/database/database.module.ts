@@ -27,6 +27,7 @@ import { Tenancy } from '../tenancy/entities/tenancy.entity';
           synchronize: false,
           logging: false,
           migrationsTableName: 'migrations',
+          migrationsRun: true,
           migrations: ['dist/database/general-migrations/*.js'],
         };
       },
