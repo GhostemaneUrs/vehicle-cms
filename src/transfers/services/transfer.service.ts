@@ -1,250 +1,388 @@
 import {
-  Injectable,
-  Scope,
-  Inject,
-  NotFoundException,
-  ForbiddenException,
   BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
-
-import { DataSource, Repository, QueryRunner, In } from 'typeorm';
-import { plainToClass } from 'class-transformer';
-
-import { Transfer } from '../../transfers/entities/transfer.entity';
-import {
-  CreateTransferDto,
-  UpdateTransferDto,
-  ReadTransferDto,
-} from '../dto/transfer.dto';
-import { Vehicle } from '../../vehicles/entities/vehicle.entity';
-import { User } from '../../auth/entities/user.entity';
+import { Transfer } from '../entities/transfer.entity';
+import { DataSource, In, QueryRunner, Repository } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 import { Organizational } from '../../organizational/entities/organizational.entity';
 import { TENANT_CONNECTION } from '../../database/common/database.tokens';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity';
+import { User } from '../../auth/entities/user.entity';
+import {
+  CreateTransferDto,
+  ReadTransferDto,
+  UpdateTransferDto,
+} from '../dto/transfer.dto';
+import { plainToClass } from 'class-transformer';
 
-@Injectable({ scope: Scope.REQUEST })
-export class TransfersService {
+@Injectable()
+export class TransferService {
+  private readonly userRepository: Repository<User>;
+  private readonly vehicleRepository: Repository<Vehicle>;
+  private readonly projectRepository: Repository<Project>;
   private readonly transferRepository: Repository<Transfer>;
+  private readonly organizationalRepository: Repository<Organizational>;
 
   constructor(
     @Inject(TENANT_CONNECTION)
     private readonly dataSource: DataSource,
   ) {
+    this.vehicleRepository = this.dataSource.getRepository(Vehicle);
+    this.projectRepository = this.dataSource.getRepository(Project);
     this.transferRepository = this.dataSource.getRepository(Transfer);
+    this.organizationalRepository =
+      this.dataSource.getRepository(Organizational);
   }
 
-  async findAllForUser(user: User): Promise<ReadTransferDto[]> {
-    // recarga al user con sus relaciones de proyectos y unidades
-    const userEntity = await this.dataSource.getRepository(User).findOne({
-      where: { id: user.id },
-      relations: ['projects', 'organizational'],
-    });
-
-    if (!userEntity) throw new NotFoundException('User not found');
-
-    const projectIds = userEntity.projects.map((p) => p.id);
-    const ouIds = userEntity.organizational.map((ou) => ou.id);
-
-    const transfers = await this.transferRepository.find({
-      where: {
-        project: { id: In(projectIds) },
-        organizational: { id: In(ouIds) },
-      },
-      relations: [
-        'vehicle',
-        'client',
-        'transmitter',
-        'project',
-        'organizational',
-      ],
-      order: { createdAt: 'DESC' },
-    });
-
-    return transfers.map((t) => plainToClass(ReadTransferDto, t));
-  }
-
-  /**
-   * Crea una nueva transferencia validando accesos.
-   */
-  async create(dto: CreateTransferDto, user: User): Promise<ReadTransferDto> {
-    const qr: QueryRunner = this.dataSource.createQueryRunner();
-    await qr.connect();
-    await qr.startTransaction();
-
+  async findAll(user: User): Promise<ReadTransferDto[]> {
     try {
-      // 1) Validar que user pertenece al project y organizationalUnit
-      const userEntity = await qr.manager.findOne(User, {
-        where: { id: user.id },
-        relations: ['projects', 'organizational'],
+      const userInfo = await this.userRepository.findOne({
+        where: {
+          id: user.id,
+        },
+        relations: ['organizational', 'projects'],
       });
-      if (!userEntity) throw new NotFoundException('User not found');
 
-      if (
-        !userEntity.projects.some((p) => p.id === dto.projectId) ||
-        !userEntity.organizational.some((ou) => ou.id === dto.organizationalId)
-      ) {
-        throw new ForbiddenException(
-          'You do not belong to that project or organizational unit',
-        );
+      if (!userInfo) {
+        throw new NotFoundException('User not found');
       }
 
-      // 2) Cargar entidades relacionadas
-      const vehicle = await qr.manager.findOne(Vehicle, {
-        where: { id: dto.vehicleId },
-      });
-      if (!vehicle) throw new NotFoundException('Vehicle not found');
+      const { organizational, projects } = userInfo;
+      const projectIds = projects.map((project) => project.id);
+      const organizationalIds = organizational.map((org) => org.id);
 
-      const client = await qr.manager.findOne(User, {
-        where: { id: dto.clientId },
+      const transfers = await this.transferRepository.find({
+        where: {
+          project: {
+            id: In(projectIds),
+          },
+          organizational: {
+            id: In(organizationalIds),
+          },
+        },
+        relations: [
+          'vehicle',
+          'project',
+          'client',
+          'transmitter',
+          'organizational',
+        ],
       });
-      if (!client) throw new NotFoundException('Client not found');
 
-      const transmitter = await qr.manager.findOne(User, {
-        where: { id: dto.transmitterId },
-      });
-      if (!transmitter) throw new NotFoundException('Transmitter not found');
+      return transfers.map((transfer) =>
+        plainToClass(ReadTransferDto, transfer),
+      );
+    } catch (error) {
+      console.log('🚀 ~ TransferService ~ findAll ~ error:', error);
+      throw new BadRequestException(error);
+    }
+  }
 
-      const project = await qr.manager.findOne(Project, {
-        where: { id: dto.projectId },
+  async findOne(id: string, user: User): Promise<ReadTransferDto> {
+    try {
+      const userInfo = await this.userRepository.findOne({
+        where: {
+          id: user.id,
+        },
+        relations: ['organizational', 'projects'],
       });
+
+      const transfer = await this.transferRepository.findOne({
+        where: { id },
+        relations: [
+          'vehicle',
+          'client',
+          'transmitter',
+          'project',
+          'organizational',
+        ],
+      });
+
+      if (!transfer) throw new NotFoundException('Transfer not found');
+
+      if (
+        !userInfo.projects.some((p) => p.id === transfer.project.id) ||
+        !userInfo.organizational.some(
+          (o) => o.id === transfer.organizational.id,
+        )
+      ) {
+        throw new ForbiddenException(`Access denied to this transfer`);
+      }
+
+      return plainToClass(ReadTransferDto, transfer);
+    } catch (error) {
+      console.log('🚀 ~ TransferService ~ findOne ~ error:', error);
+      throw new BadRequestException(error);
+    }
+  }
+
+  async create(data: CreateTransferDto, user: User): Promise<ReadTransferDto> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const project = await queryRunner.manager.findOne(Project, {
+        where: { id: data.projectId },
+        relations: ['users'],
+      });
+
       if (!project) throw new NotFoundException('Project not found');
 
-      const ou = await qr.manager.findOne(Organizational, {
-        where: { id: dto.organizationalId },
-      });
-      if (!ou) throw new NotFoundException('Organizational Unit not found');
-
-      // 3) Crear y guardar la transferencia
-      const transfer = qr.manager.create(Transfer, {
-        type: dto.type,
-        vehicle,
-        client,
-        transmitter,
-        project,
-        organizational: ou,
-        createdBy: user.id, // si tienes ese campo en tu entidad
-      });
-
-      const saved = await qr.manager.save(Transfer, transfer);
-
-      await qr.commitTransaction();
-      return plainToClass(ReadTransferDto, saved);
-    } catch (err) {
-      await qr.rollbackTransaction();
-      if (
-        err instanceof NotFoundException ||
-        err instanceof ForbiddenException ||
-        err instanceof BadRequestException
-      ) {
-        throw err;
+      if (!project.users.some((u) => u.id === user.id)) {
+        throw new ForbiddenException(
+          `You are not allowed to create a transfer in this project ${project.name}`,
+        );
       }
-      throw new BadRequestException(err.message);
+
+      const organizational = await queryRunner.manager.findOne(Organizational, {
+        where: { id: data.organizationalId },
+        relations: ['users'],
+      });
+
+      if (!organizational)
+        throw new NotFoundException('Organizational not found');
+
+      if (!project.organizational.some((o) => o.id === organizational.id)) {
+        throw new ForbiddenException(
+          `You are not allowed to create a transfer in this organizational ${organizational.name}`,
+        );
+      }
+
+      if (!organizational.users.some((u) => u.id === user.id)) {
+        throw new ForbiddenException(
+          `You are not allowed to create a transfer in this organizational ${organizational.name}`,
+        );
+      }
+
+      const vehicle = await queryRunner.manager.findOne(Vehicle, {
+        where: { id: data.vehicleId },
+      });
+
+      if (!vehicle) throw new NotFoundException('Vehicle not found');
+
+      const client = await queryRunner.manager.findOne(User, {
+        where: { id: data.clientId },
+      });
+
+      if (!client) throw new NotFoundException('Client not found');
+
+      const transmitter = await queryRunner.manager.findOne(User, {
+        where: { id: data.transmitterId },
+      });
+
+      if (!transmitter) throw new NotFoundException('Transmitter not found');
+
+      const transfer = new Transfer();
+      transfer.type = data.type;
+      transfer.vehicle = vehicle;
+      transfer.client = client;
+      transfer.transmitter = transmitter;
+      transfer.project = project;
+      transfer.organizational = organizational;
+
+      await queryRunner.manager.save(transfer);
+
+      await queryRunner.commitTransaction();
+
+      return plainToClass(ReadTransferDto, transfer);
+    } catch (error) {
+      console.log('🚀 ~ TransferService ~ create ~ error:', error);
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(error);
     } finally {
-      await qr.release();
+      await queryRunner.release();
     }
   }
 
-  /**
-   * Actualiza una transferencia existente, con mismas validaciones
-   */
   async update(
     id: string,
-    dto: UpdateTransferDto,
+    data: UpdateTransferDto,
     user: User,
   ): Promise<ReadTransferDto> {
-    const qr = this.dataSource.createQueryRunner();
-    await qr.connect();
-    await qr.startTransaction();
-
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
     try {
-      const existing = await qr.manager.findOne(Transfer, {
+      const userInfo = await this.userRepository.findOne({
+        where: {
+          id: user.id,
+        },
+        relations: ['organizational', 'projects'],
+      });
+
+      const transfer = await queryRunner.manager.findOne(Transfer, {
         where: { id },
-        relations: ['project', 'organizationalUnit'],
+        relations: [
+          'project',
+          'organizational',
+          'vehicle',
+          'client',
+          'transmitter',
+        ],
       });
-      if (!existing) throw new NotFoundException('Transfer not found');
 
-      // Validar acceso al proyecto/unidad original y a los nuevos
-      const userEntity = await qr.manager.findOne(User, {
-        where: { id: user.id },
-        relations: ['projects', 'organizational'],
-      });
-      if (!userEntity) throw new NotFoundException('User not found');
+      if (!transfer) throw new NotFoundException('Transfer not found');
 
-      const belongsToOld =
-        userEntity.projects.some((p) => p.id === existing.project.id) &&
-        userEntity.organizational.some(
-          (ou) => ou.id === existing.organizational.id,
-        );
-      const belongsToNew =
-        userEntity.projects.some((p) => p.id === dto.projectId) &&
-        userEntity.organizational.some((ou) => ou.id === dto.organizationalId);
-
-      if (!belongsToOld || !belongsToNew) {
+      if (!userInfo.projects.some((p) => p.id === transfer.project.id)) {
         throw new ForbiddenException(
-          'You do not have access to the original or the new project/organizational unit',
+          `You are not allowed to update this transfer ${transfer.id}`,
         );
       }
 
-      // Aplicar cambios permitidos
-      existing.type = dto.type ?? existing.type;
-
-      if (dto.projectId !== existing.project.id) {
-        const project = await qr.manager.findOne(Project, {
-          where: { id: dto.projectId },
-        });
-        if (!project) throw new NotFoundException('Project not found');
-        existing.project = project;
-      }
-      if (dto.organizationalId !== existing.organizational.id) {
-        const ou = await qr.manager.findOne(Organizational, {
-          where: { id: dto.organizationalId },
-        });
-        if (!ou) throw new NotFoundException('Organizational Unit not found');
-        existing.organizational = ou;
-      }
-
-      const saved = await qr.manager.save(Transfer, existing);
-      await qr.commitTransaction();
-      return plainToClass(ReadTransferDto, saved);
-    } catch (err) {
-      await qr.rollbackTransaction();
       if (
-        err instanceof NotFoundException ||
-        err instanceof ForbiddenException ||
-        err instanceof BadRequestException
+        !userInfo.organizational.some(
+          (o) => o.id === transfer.organizational.id,
+        )
       ) {
-        throw err;
+        throw new ForbiddenException(
+          `You are not allowed to update this transfer ${transfer.id}`,
+        );
       }
-      throw new BadRequestException(err.message);
+
+      if (data.projectId !== transfer.project.id) {
+        const project = await queryRunner.manager.findOne(Project, {
+          where: { id: data.projectId },
+          relations: ['users'],
+        });
+
+        if (!project) throw new NotFoundException('Project not found');
+
+        if (!project.users.some((u) => u.id === user.id)) {
+          throw new ForbiddenException(
+            `You are not allowed to update this transfer ${transfer.id}`,
+          );
+        }
+
+        transfer.project = project;
+      }
+
+      if (data.organizationalId !== transfer.organizational.id) {
+        const organizational = await queryRunner.manager.findOne(
+          Organizational,
+          {
+            where: { id: data.organizationalId },
+            relations: ['users', 'project'],
+          },
+        );
+
+        if (!organizational)
+          throw new NotFoundException('Organizational not found');
+
+        if (!organizational.users.some((u) => u.id === user.id)) {
+          throw new ForbiddenException(
+            `You are not allowed to update this transfer ${transfer.id}`,
+          );
+        }
+
+        if (organizational.project.id !== transfer.project.id) {
+          throw new ForbiddenException(
+            `You are not allowed to update this transfer ${transfer.id}`,
+          );
+        }
+
+        transfer.organizational = organizational;
+      }
+
+      if (data.type !== transfer.type) {
+        transfer.type = data.type;
+      }
+
+      if (data.vehicleId !== transfer.vehicle.id) {
+        const vehicle = await queryRunner.manager.findOne(Vehicle, {
+          where: { id: data.vehicleId },
+        });
+
+        if (!vehicle) throw new NotFoundException('Vehicle not found');
+
+        transfer.vehicle = vehicle;
+      }
+
+      if (data.clientId !== transfer.client.id) {
+        const client = await queryRunner.manager.findOne(User, {
+          where: { id: data.clientId },
+        });
+
+        if (!client) throw new NotFoundException('Client not found');
+
+        transfer.client = client;
+      }
+
+      if (data.transmitterId !== transfer.transmitter.id) {
+        const transmitter = await queryRunner.manager.findOne(User, {
+          where: { id: data.transmitterId },
+        });
+
+        if (!transmitter) throw new NotFoundException('Transmitter not found');
+
+        transfer.transmitter = transmitter;
+      }
+
+      await queryRunner.manager.save(transfer);
+
+      await queryRunner.commitTransaction();
+
+      return plainToClass(ReadTransferDto, transfer);
+    } catch (error) {
+      console.log('🚀 ~ TransferService ~ create ~ error:', error);
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(error);
     } finally {
-      await qr.release();
+      await queryRunner.release();
     }
   }
 
-  async remove(id: string, user: User): Promise<void> {
-    const existing = await this.transferRepository.findOne({
-      where: { id },
-      relations: ['project', 'organizational'],
-    });
+  async remove(id: string, user: User): Promise<{ message: string }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      const userInfo = await this.userRepository.findOne({
+        where: {
+          id: user.id,
+        },
+        relations: ['organizational', 'projects'],
+      });
 
-    if (!existing) throw new NotFoundException('Transfer not found');
+      if (!userInfo) throw new NotFoundException('User not found');
 
-    const userEntity = await this.dataSource.getRepository(User).findOne({
-      where: { id: user.id },
-      relations: ['organizational'],
-    });
+      const transfer = await queryRunner.manager.findOne(Transfer, {
+        where: { id },
+        relations: ['project', 'organizational'],
+      });
 
-    if (
-      !userEntity ||
-      !userEntity.organizational.some(
-        (ou) => ou.id === existing.organizational.id,
-      )
-    ) {
-      throw new ForbiddenException(
-        'You do not have access to delete this transfer',
-      );
+      if (!transfer) throw new NotFoundException('Transfer not found');
+
+      if (!userInfo.projects.some((p) => p.id === transfer.project.id)) {
+        throw new ForbiddenException(
+          `You are not allowed to delete this transfer ${transfer.id}`,
+        );
+      }
+
+      if (
+        !userInfo.organizational.some(
+          (o) => o.id === transfer.organizational.id,
+        )
+      ) {
+        throw new ForbiddenException(
+          `You are not allowed to delete this transfer ${transfer.id}`,
+        );
+      }
+
+      await queryRunner.manager.remove(Transfer, transfer);
+
+      await queryRunner.commitTransaction();
+
+      return { message: 'Transfer deleted successfully' };
+    } catch (error) {
+      console.log('🚀 ~ TransferService ~ remove ~ error:', error);
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(error);
+    } finally {
+      await queryRunner.release();
     }
-
-    await this.transferRepository.remove(existing);
   }
 }

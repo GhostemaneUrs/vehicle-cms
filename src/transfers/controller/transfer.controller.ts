@@ -7,51 +7,104 @@ import {
   Param,
   Body,
   UseGuards,
-  Req,
+  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { PermissionsGuard } from '../../auth/guards/permissions.guard';
-import { Permissions } from '../../common/permission.decorator';
-import { TransfersService } from '../services/transfer.service';
+import { TransferService } from '../services/transfer.service';
 import {
   CreateTransferDto,
-  UpdateTransferDto,
   ReadTransferDto,
+  UpdateTransferDto,
 } from '../dto/transfer.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { USER_INFO } from '../../auth/decorators/user.decorator';
+import { User } from '../../auth/entities/user.entity';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('transfers')
-export class TransfersController {
-  constructor(private readonly transferService: TransfersService) {}
+@UseGuards(JwtAuthGuard)
+export class TransferController {
+  constructor(private readonly transferService: TransferService) {}
 
   @Get()
-  @Permissions('view_transfers')
-  getAll(@Req() req): Promise<ReadTransferDto[]> {
-    return this.transferService.findAllForUser(req.user);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get all transfers' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all transfers',
+    type: [ReadTransferDto],
+  })
+  async findAll(@USER_INFO() user: User): Promise<ReadTransferDto[]> {
+    return this.transferService.findAll(user);
+  }
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get a transfer by id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns a transfer',
+    type: ReadTransferDto,
+  })
+  async findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @USER_INFO() user: User,
+  ): Promise<ReadTransferDto> {
+    return this.transferService.findOne(id, user);
   }
 
   @Post()
-  @Permissions('create_transfers')
   @HttpCode(HttpStatus.CREATED)
-  create(@Req() req, @Body() dto: CreateTransferDto): Promise<ReadTransferDto> {
-    return this.transferService.create(dto, req.user);
+  @ApiOperation({ summary: 'Create a transfer' })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns the created transfer',
+    type: ReadTransferDto,
+  })
+  async create(
+    @Body() dto: CreateTransferDto,
+    @USER_INFO() user: User,
+  ): Promise<ReadTransferDto> {
+    return this.transferService.create(dto, user);
   }
 
   @Put(':id')
-  @Permissions('edit_transfers')
-  update(
-    @Param('id') id: string,
-    @Req() req,
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Update a transfer' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the updated transfer',
+    type: ReadTransferDto,
+  })
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateTransferDto,
+    @USER_INFO() user: User,
   ): Promise<ReadTransferDto> {
-    return this.transferService.update(id, dto, req.user);
+    return this.transferService.update(id, dto, user);
   }
 
   @Delete(':id')
-  @Permissions('delete_transfers')
-  remove(@Param('id') id: string, @Req() req): Promise<void> {
-    return this.transferService.remove(id, req.user);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a transfer' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the deleted transfer',
+    type: Object,
+    schema: {
+      properties: {
+        message: {
+          type: 'string',
+          description: 'Response message',
+        },
+      },
+    },
+  })
+  async remove(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @USER_INFO() user: User,
+  ): Promise<{ message: string }> {
+    return this.transferService.remove(id, user);
   }
 }
