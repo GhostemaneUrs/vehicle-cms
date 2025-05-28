@@ -26,6 +26,9 @@ export class User {
   @Column({ name: 'password_hash' })
   passwordHash: string;
 
+  @Column({ name: 'refresh_token_hash', nullable: true })
+  refreshTokenHash: string;
+
   @Column({ type: 'timestamp', default: () => 'now()', name: 'created_at' })
   createdAt: Date;
 
@@ -33,15 +36,27 @@ export class User {
   isActive: boolean;
 
   @ManyToMany(() => Role, (role) => role.users, { eager: true })
-  @JoinTable({ name: 'user_roles' })
+  @JoinTable({
+    name: 'user_roles',
+    joinColumn: { name: 'user_id' },
+    inverseJoinColumn: { name: 'role_id' },
+  })
   roles: Role[];
 
   @ManyToMany(() => Project, (project) => project.users)
-  @JoinTable({ name: 'user_projects' })
+  @JoinTable({
+    name: 'user_projects',
+    joinColumn: { name: 'user_id' },
+    inverseJoinColumn: { name: 'project_id' },
+  })
   projects: Project[];
 
   @ManyToMany(() => Organizational, (ou) => ou.users)
-  @JoinTable({ name: 'user_organizational' })
+  @JoinTable({
+    name: 'user_organizational',
+    joinColumn: { name: 'user_id' },
+    inverseJoinColumn: { name: 'organizational_id' },
+  })
   organizational: Organizational[];
 
   @OneToMany(() => Transfer, (t) => t.client)

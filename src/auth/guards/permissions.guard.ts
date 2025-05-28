@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../../common/permission.decorator';
 import { Request } from 'express';
-import { ReadUserDto } from '../../auth/dtos/user.dto';
+import { JwtPayload } from '../../@types/express';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -22,7 +22,7 @@ export class PermissionsGuard implements CanActivate {
     if (!required || required.length === 0) return true;
 
     const req = ctx.switchToHttp().getRequest<Request>();
-    const user = req.user as ReadUserDto & { permissions: string[] };
+    const user = req.user as JwtPayload;
 
     if (!user || !user.permissions) {
       throw new ForbiddenException('User has no permissions array');

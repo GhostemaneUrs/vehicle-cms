@@ -11,3 +11,14 @@ export class LoginDto {
   @IsNotEmpty()
   password: string;
 }
+
+export class TokenDto {
+  accessToken: string;
+}
+
+export interface JwtPayload {
+  sub: string;
+  username: string;
+  email: string;
+  roles: string[];
+}

@@ -111,10 +111,12 @@ export class UserService {
   async findByUsername(username: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { username, isActive: true },
+      relations: ['roles', 'roles.permissions'],
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    console.log('🚀 ~ UserService ~ findByUsername ~ user:', user.roles);
 
+    if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
@@ -140,5 +142,13 @@ export class UserService {
     await this.userRepository.save(user);
 
     return plainToClass(ReadUserDto, user);
+  }
+
+  async setCurrentRefreshToken(hash: string, userId: string) {
+    await this.userRepository.update(userId, { refreshTokenHash: hash });
+  }
+
+  async removeRefreshToken(userId: string) {
+    await this.userRepository.update(userId, { refreshTokenHash: null });
   }
 }

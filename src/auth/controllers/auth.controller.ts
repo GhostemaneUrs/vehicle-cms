@@ -11,98 +11,114 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { AuthService } from '../services/auth.service';
-import { UserService } from '../services/user.service';
 import { CreateUserDto, ReadUserDto } from '../dtos/user.dto';
 import { LoginDto } from '../dtos/auth.dto';
+import { AuthResponseDto } from '../dtos/user.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { JwtRefreshGuard } from '../guards/jwt-refresh.guard';
 import {
-  ApiCreatedResponse,
-  ApiHeader,
-  ApiOkResponse,
+  ApiTags,
   ApiOperation,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiCookieAuth,
 } from '@nestjs/swagger';
 import { plainToClass } from 'class-transformer';
+import { ConfigService } from '@nestjs/config';
+import { Public } from '../../common/public.decorator';
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: ReadUserDto;
-    }
-  }
-}
-
-@ApiHeader({
-  name: 'x-tenant-id',
-  description: 'Tenant identifier (schema name)',
-  required: true,
-})
+@Public()
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly userService: UserService,
+    private readonly cfg: ConfigService,
   ) {}
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
   @ApiCreatedResponse({ type: ReadUserDto })
-  async register(
-    @Body() dto: CreateUserDto,
-    @Res({ passthrough: true }) res: Response,
-  ): Promise<ReadUserDto> {
-    console.log('🚀 ~ AuthController ~ dto:', dto);
-    const user = await this.userService.create(dto);
-    const { token } = await this.authService.login(user);
-
-    res.cookie('Authentication', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 24 * 3600 * 1000,
-    });
+  async register(@Body() dto: CreateUserDto): Promise<ReadUserDto> {
+    const user = await this.authService.register(dto);
     return user;
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login a user' })
-  @ApiOkResponse({ type: ReadUserDto })
+  @ApiOperation({ summary: 'Login and receive tokens in cookies' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiCookieAuth()
   async login(
     @Body() dto: LoginDto,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<ReadUserDto> {
-    const user = await this.authService.validateUser(dto);
-    const { token } = await this.authService.login(user);
+  ) {
+    const user = await this.authService.validateUser(
+      dto.username,
+      dto.password,
+    );
 
-    res.cookie('Authentication', token, {
+    const { accessToken, refreshToken } = await this.authService.login(user);
+
+    res.cookie('Authentication', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      path: '/',
-      maxAge: 24 * 3600 * 1000,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge:
+        parseInt(this.cfg.get<string>('config.jwt.accessExpiresIn')) * 1000,
     });
 
-    return plainToClass(ReadUserDto, user);
+    res.cookie('Refresh', refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge:
+        parseInt(this.cfg.get<string>('config.jwt.refreshExpiresIn')) * 1000,
+    });
+
+    return plainToClass(AuthResponseDto, { accessToken, refreshToken });
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('profile')
+  @UseGuards(JwtRefreshGuard)
+  @Get('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get the current user profile' })
-  @ApiOkResponse({ type: ReadUserDto })
-  getProfile(@Req() req: Request): ReadUserDto {
-    return req.user as ReadUserDto;
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiCookieAuth()
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { accessToken, refreshToken } = await this.authService.refreshTokens(
+      req.user,
+      req.cookies.Refresh,
+    );
+
+    res.cookie('Authentication', accessToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+
+    res.cookie('Refresh', refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+
+    return plainToClass(AuthResponseDto, { accessToken, refreshToken });
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout a user' })
+  @ApiOperation({ summary: 'Logout and clear tokens' })
   @ApiOkResponse({ type: String })
-  logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('Authentication', { path: '/' });
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.authService.logout(req.user.sub);
+    res.clearCookie('Authentication');
+    res.clearCookie('Refresh');
     return 'Logged out';
   }
 }

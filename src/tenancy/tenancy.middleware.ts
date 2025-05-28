@@ -32,6 +32,7 @@ export class TenancyMiddleware implements NestMiddleware {
     const tenant = await PublicDataSource.getRepository(Tenancy).findOneBy({
       name: tn,
     });
+
     if (!tenant) {
       throw new BadRequestException(`Tenant "${tn}" not found`);
     }
