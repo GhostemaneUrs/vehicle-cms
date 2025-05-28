@@ -1,9 +1,12 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
-import { AuthController } from './auth/controllers/auth.controller';
-import { UserController } from './auth/controllers/user.controller';
 import { TenancyModule } from './tenancy/tenancy.module';
 import { TenancyMiddleware } from './tenancy/tenancy.middleware';
 import { AuthModule } from './auth/auth.module';
@@ -11,6 +14,9 @@ import { TenantGuard } from './tenancy/guards/tenant.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { VehicleModule } from './vehicles/vehicle.module';
+import { ProjectModule } from './projects/project.module';
+import { OrganizationalModule } from './organizational/organizational.module';
+import { TransferModule } from './transfers/transfer.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
@@ -18,6 +24,9 @@ import { VehicleModule } from './vehicles/vehicle.module';
     TenancyModule,
     AuthModule,
     VehicleModule,
+    ProjectModule,
+    OrganizationalModule,
+    TransferModule,
     ThrottlerModule.forRoot([{ ttl: 60, limit: 20 }]),
   ],
   providers: [
@@ -29,6 +38,14 @@ import { VehicleModule } from './vehicles/vehicle.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenancyMiddleware).forRoutes('*');
+    consumer
+      .apply(TenancyMiddleware)
+      .exclude(
+        { path: 'auth', method: RequestMethod.ALL },
+        { path: 'auth/(.*)', method: RequestMethod.ALL },
+        { path: 'tenancy', method: RequestMethod.ALL },
+        { path: 'tenancy/(.*)', method: RequestMethod.ALL },
+      )
+      .forRoutes('*');
   }
 }
