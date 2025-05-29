@@ -19,11 +19,8 @@ export class CreateProjectDto {
 
   @IsUUID()
   @ApiProperty({ description: 'User ID', format: 'uuid' })
+  @IsOptional()
   userId: string;
-
-  @IsUUID()
-  @ApiProperty({ description: 'Organizational ID', format: 'uuid' })
-  organizationalId: string;
 }
 
 export class UpdateProjectDto extends PartialType(CreateProjectDto) {
@@ -56,4 +53,10 @@ export class ReadProjectDto {
   @ApiProperty({ description: 'Project transfers' })
   @Type(() => ReadTransferDto)
   transfers: ReadTransferDto[];
+}
+
+export class AssignUserDto {
+  @ApiProperty({ description: 'User id' })
+  @IsUUID()
+  userId: string;
 }

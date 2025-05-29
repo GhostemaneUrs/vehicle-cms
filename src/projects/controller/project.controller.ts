@@ -11,6 +11,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import {
+  AssignUserDto,
   CreateProjectDto,
   ReadProjectDto,
   UpdateProjectDto,
@@ -75,9 +76,19 @@ export class ProjectsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a project by id' })
-  @ApiNoContentResponse()
+  @ApiNoContentResponse({
+    description: 'Project deleted successfully',
+  })
   @ResourceAccess({ projectProp: 'id' })
   remove(@Param('id') id: string) {
     return this.projectsService.remove(id);
+  }
+
+  @Post(':id/users')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Assign a user to a project' })
+  @ApiOkResponse({ type: Object })
+  assignUser(@Param('id') id: string, @Body() data: AssignUserDto) {
+    return this.projectsService.assignUser(id, data);
   }
 }

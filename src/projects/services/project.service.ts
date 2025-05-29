@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -10,6 +9,7 @@ import { Project } from '../entities/project.entity';
 import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { plainToClass } from 'class-transformer';
 import {
+  AssignUserDto,
   CreateProjectDto,
   ReadProjectDto,
   UpdateProjectDto,
@@ -63,15 +63,32 @@ export class ProjectService {
 
       if (project) throw new BadRequestException('Project already exists');
 
+      let projectUser = user;
+
+      if (data.userId) {
+        const foundUser = await queryRunner.manager.findOne(User, {
+          where: { id: data.userId },
+          relations: ['roles', 'roles.permissions'],
+        });
+
+        if (!foundUser) {
+          throw new BadRequestException('User not found');
+        }
+
+        projectUser = foundUser;
+      }
+
       const newProject = new Project();
       newProject.name = data.name;
       newProject.description = data.description;
-      newProject.users = [user];
 
-      await queryRunner.manager.save(newProject);
+      const saved = await queryRunner.manager.save(newProject);
+
+      saved.users = [projectUser];
+      await queryRunner.manager.save(saved);
 
       await queryRunner.commitTransaction();
-      return plainToClass(ReadProjectDto, newProject);
+      return plainToClass(ReadProjectDto, saved);
     } catch (error) {
       console.log('🚀 ~ ProjectService ~ create ~ error:', error);
       await queryRunner.rollbackTransaction();
@@ -139,6 +156,42 @@ export class ProjectService {
       await queryRunner.manager.remove(project);
       await queryRunner.commitTransaction();
       return { message: 'Project deleted successfully' };
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(error.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async assignUser(
+    id: string,
+    data: AssignUserDto,
+  ): Promise<{ message: string }> {
+    const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const { userId } = data;
+
+      const project = await this.projectRepository.findOne({
+        where: { id },
+        relations: ['users'],
+      });
+
+      if (!project) throw new NotFoundException('Project not found');
+
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+      });
+
+      if (!user) throw new NotFoundException('User not found');
+
+      project.users.push(user);
+      await queryRunner.manager.save(project);
+      await queryRunner.commitTransaction();
+      return { message: 'User assigned to project successfully' };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw new BadRequestException(error.message);

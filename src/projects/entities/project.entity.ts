@@ -26,12 +26,12 @@ export class Project {
   @Column({ type: 'timestamp', default: () => 'now()', name: 'created_at' })
   createdAt: Date;
 
-  @OneToMany(() => Organizational, (ou) => ou.project)
+  @OneToMany(() => Organizational, (ou) => ou.project, { nullable: true })
   organizational: Organizational[];
 
   @ManyToMany(() => User, (user) => user.projects)
   users: User[];
 
-  @OneToMany(() => Transfer, (t) => t.project)
+  @OneToMany(() => Transfer, (t) => t.project, { nullable: true })
   transfers: Transfer[];
 }
