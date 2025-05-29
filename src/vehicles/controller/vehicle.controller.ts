@@ -19,21 +19,20 @@ import {
 } from '../dto/vehicle.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import {
-  ApiBearerAuth,
   ApiCreatedResponse,
   ApiHeader,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
 } from '@nestjs/swagger';
 
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('vehicles')
 @ApiHeader({
   name: 'x-tenant-id',
   description: 'Tenant identifier (schema name)',
   required: true,
 })
+@UseGuards(JwtAuthGuard)
 export class VehicleController {
   constructor(private readonly vehicleService: VehicleService) {}
 
@@ -78,7 +77,9 @@ export class VehicleController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a vehicle by id' })
-  @ApiOkResponse({ description: 'Vehicle deleted successfully' })
+  @ApiNoContentResponse({
+    description: 'Vehicle deleted successfully',
+  })
   remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.vehicleService.remove(id);
   }
