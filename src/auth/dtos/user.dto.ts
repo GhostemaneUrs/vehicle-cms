@@ -1,6 +1,6 @@
 import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString, IsUUID } from 'class-validator';
 
 import { IsNotEmpty } from 'class-validator';
 import { Role } from '../entities/roles.entity';
@@ -19,7 +19,15 @@ export class CreateUserDto {
   password: string;
 }
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {}
+export class UpdateUserDto {
+  @IsString()
+  @IsOptional()
+  username: string;
+
+  @IsString()
+  @IsOptional()
+  password: string;
+}
 
 @Exclude()
 export class ReadUserDto {
@@ -39,4 +47,10 @@ export class ReadUserDto {
 export class AuthResponseDto {
   @ApiProperty() accessToken: string;
   @ApiProperty() refreshToken: string;
+}
+
+export class AssignRoleDto {
+  @ApiProperty({ description: 'Role id' })
+  @IsUUID()
+  roleId: string;
 }

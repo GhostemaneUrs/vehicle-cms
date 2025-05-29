@@ -10,9 +10,15 @@ import {
 import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 import * as bcrypt from 'bcrypt';
-import { CreateUserDto, UpdateUserDto, ReadUserDto } from '../dtos/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  ReadUserDto,
+  AssignRoleDto,
+} from '../dtos/user.dto';
 import { plainToClass } from 'class-transformer';
 import { TENANT_CONNECTION } from '../../database/common/database.tokens';
+import { Role } from '../entities/roles.entity';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UserService {
@@ -78,6 +84,7 @@ export class UserService {
       const user = await queryRunner.manager.findOne(User, {
         where: { id },
       });
+
       if (!user) {
         throw new NotFoundException('User not found');
       }
@@ -108,6 +115,38 @@ export class UserService {
     }
   }
 
+  async assignRole(userId: string, data: AssignRoleDto) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const { roleId } = data;
+
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        relations: ['roles'],
+      });
+
+      if (!user) throw new NotFoundException('User not found');
+
+      const role = await queryRunner.manager.findOne(Role, {
+        where: { id: roleId },
+      });
+
+      if (!role) throw new NotFoundException('Role not found');
+
+      user.roles.push(role);
+      await queryRunner.manager.save(user);
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException(error.message);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async findByUsername(username: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { username, isActive: true },
@@ -130,6 +169,12 @@ export class UserService {
     if (!user.isActive) throw new UnauthorizedException('User is not active');
 
     return plainToClass(ReadUserDto, user);
+  }
+
+  async findByIdToToken(id: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
   async remove(id: string): Promise<ReadUserDto> {

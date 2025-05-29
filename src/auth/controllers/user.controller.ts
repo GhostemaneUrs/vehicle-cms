@@ -12,7 +12,12 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { UserService } from '../services/user.service';
-import { CreateUserDto, UpdateUserDto, ReadUserDto } from '../dtos/user.dto';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  ReadUserDto,
+  AssignRoleDto,
+} from '../dtos/user.dto';
 import {
   ApiCreatedResponse,
   ApiHeader,
@@ -20,6 +25,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { ApiOperation } from '@nestjs/swagger';
+import { User } from '../entities/user.entity';
 
 @ApiTags('Users')
 @Controller('users')
@@ -44,8 +50,13 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get a user by username' })
   @ApiOkResponse({ type: ReadUserDto })
-  async findOne(@Param('username') username: string): Promise<ReadUserDto> {
-    return this.userService.findOne(username);
+  async findOne(@Param('username') username: string): Promise<User> {
+    const response = await this.userService.findByUsername(username);
+    return {
+      ...response,
+      passwordHash: undefined,
+      refreshTokenHash: undefined,
+    };
   }
 
   @Post()
@@ -56,21 +67,29 @@ export class UserController {
     return this.userService.create(dto);
   }
 
-  @Put(':username')
+  @Put(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update a user by username' })
+  @ApiOperation({ summary: 'Update a user by id' })
   @ApiOkResponse({ type: ReadUserDto })
   async update(
-    @Param('username') username: string,
+    @Param('id') id: string,
     @Body() dto: UpdateUserDto,
   ): Promise<ReadUserDto> {
-    return this.userService.update(username, dto);
+    return this.userService.update(id, dto);
   }
 
-  @Delete(':username')
+  @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a user by username' })
-  async remove(@Param('username') username: string): Promise<void> {
-    await this.userService.remove(username);
+  @ApiOperation({ summary: 'Delete a user by id' })
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.userService.remove(id);
+  }
+
+  @Post(':id/roles')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Assign a role to a user' })
+  @ApiOkResponse({ type: Object })
+  assignRole(@Param('id') id: string, @Body() data: AssignRoleDto) {
+    return this.userService.assignRole(id, data);
   }
 }

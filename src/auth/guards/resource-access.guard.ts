@@ -25,6 +25,7 @@ export class ResourceAccessGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
+
     const user = req.user as JwtPayload;
     const meta =
       this.reflector.get<ResourceAccessOptions>(
@@ -38,12 +39,16 @@ export class ResourceAccessGuard implements CanActivate {
 
     if (meta.projectProp) {
       const projectId =
-        req.params[meta.projectProp] ?? req.body[meta.projectProp];
+        req.params?.[meta.projectProp] ??
+        req.body?.[meta.projectProp] ??
+        req.query?.[meta.projectProp];
+
       if (!projectId) {
         throw new NotFoundException(
           `Project identifier ("${meta.projectProp}") not provided`,
         );
       }
+
       const ok = await this.projectService.userHasAccess(user.sub, projectId);
       if (!ok) {
         throw new ForbiddenException('Access denied to project');
@@ -52,8 +57,10 @@ export class ResourceAccessGuard implements CanActivate {
 
     if (meta.organizationalProp) {
       const organizationId =
-        req.params[meta.organizationalProp] ??
-        req.body[meta.organizationalProp];
+        req.params?.[meta.organizationalProp] ??
+        req.body?.[meta.organizationalProp] ??
+        req.query?.[meta.organizationalProp];
+
       if (!organizationId) {
         throw new NotFoundException(
           `Organizational identifier ("${meta.organizationalProp}") not provided`,
@@ -61,7 +68,7 @@ export class ResourceAccessGuard implements CanActivate {
       }
       const ok = await this.ouService.userHasAccess(user.sub, organizationId);
       if (!ok) {
-        throw new ForbiddenException('Access denied to organizational unit');
+        throw new ForbiddenException('Access denied to organizational');
       }
     }
 

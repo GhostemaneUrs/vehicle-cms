@@ -12,6 +12,7 @@ import { CreateUserDto } from '../dtos/user.dto';
 import { ReadUserDto } from '../dtos/user.dto';
 import { plainToClass } from 'class-transformer';
 import { JwtPayload } from '../../@types/express';
+import { User } from '../entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -81,6 +82,17 @@ export class AuthService {
     if (!matches) throw new ForbiddenException('Invalid refresh token');
 
     return this.login(plainToClass(ReadUserDto, user));
+  }
+
+  async validateRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<User | null> {
+    const user = await this.userService.findByIdToToken(userId);
+    if (!user || !user.refreshTokenHash) return null;
+
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    return isMatch ? user : null;
   }
 
   async logout(userId: string) {

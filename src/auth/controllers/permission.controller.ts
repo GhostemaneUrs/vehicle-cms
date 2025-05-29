@@ -81,7 +81,9 @@ export class PermissionsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a permission' })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiNoContentResponse()
+  @ApiNoContentResponse({
+    description: 'Permission deleted successfully',
+  })
   @ApiNotFoundResponse()
   remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.svc.remove(id);

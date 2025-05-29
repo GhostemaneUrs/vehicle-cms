@@ -77,7 +77,9 @@ export class RolesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a role' })
   @ApiParam({ name: 'id', type: 'string', format: 'uuid' })
-  @ApiNoContentResponse()
+  @ApiNoContentResponse({
+    description: 'Role deleted successfully',
+  })
   @ApiNotFoundResponse()
   remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.svc.remove(id);
