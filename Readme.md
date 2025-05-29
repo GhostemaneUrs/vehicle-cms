@@ -15,6 +15,91 @@ This is a Content Management System (CMS) for vehicles built with NestJS, implem
 - Vehicle transfer system
 - Audit and operation traceability
 
+## 🏢 Multi-tenant Architecture
+
+### Why Multi-tenant?
+
+The system implements a multi-tenant architecture for several key reasons:
+
+1. **Data Isolation**: Each tenant has its own database schema, ensuring complete data separation between organizations
+2. **Scalability**: Handles multiple organizations in a single application instance, optimizing resources
+3. **Customization**: Each tenant can have its own configurations and data without affecting others
+
+### Tenant Management
+
+#### Creating a New Tenant
+
+1. **Initial Setup**:
+   ```bash
+   # Create new tenant
+   POST /tenancy
+   {
+     "name": "new-tenant"
+   }
+
+   # Run migrations for the new tenant
+   npm run db:migrate
+
+   # Run necessary seeds
+   npm run db:seed-roles
+   ```
+
+2. **Automatic Process**:
+   - Creates new record in `tenancy` table
+   - Generates new database schema (`t_[name]`)
+   - Runs migrations to create required tables
+   - Initializes data with seeds
+
+#### Request Handling
+
+- All requests must include `x-tenant-id` header
+- Default tenant is "moradela"
+- Middleware validates tenant existence and sets correct database connection
+- Tenant context is injected into each request
+
+### Authentication System
+
+1. **Token Types**:
+   - Access Token: Short-lived JWT (900s default)
+   - Refresh Token: Long-lived token (7 days default)
+
+2. **Security Features**:
+   - Separate signing secrets for each token type
+   - Rate limiting protection
+   - Helmet security headers
+   - Tenant-specific token validation
+
+### Database Structure
+
+1. **Public Schema**:
+   - Contains `tenancy` table with tenant information
+   - Globally accessible
+
+2. **Tenant Schemas**:
+   - Each tenant has dedicated schema (`t_[name]`)
+   - Contains tenant-specific tables:
+     - Users
+     - Roles
+     - Permissions
+     - Projects
+     - Organizational Units
+     - Vehicles
+     - Transfers
+
+### Best Practices
+
+1. **Validation**:
+   - Input validation with class-validator
+   - DTOs for data integrity
+
+2. **Auditing**:
+   - Operation traceability
+   - Tenant-specific activity logging
+
+3. **Error Handling**:
+   - Tenant-specific error messages
+   - Clear and descriptive error responses
+
 ## 📋 Prerequisites
 
 - Node.js (recommended version: 18.x or higher)
@@ -145,6 +230,40 @@ http://localhost:3000/docs
 ```
 https://vehicle-cms.onrender.com/docs
 ```
+
+### Importing to Postman
+
+1. **Access Swagger JSON**:
+   - Local: `http://localhost:3000/docs-json`
+   - Production: `https://vehicle-cms.onrender.com/docs-json`
+
+2. **Import to Postman**:
+   - Open Postman
+   - Click "Import" button
+   - Select "Link" tab
+   - Paste the Swagger JSON URL
+   - Click "Continue" and then "Import"
+
+3. **Postman Environment Setup**:
+   - Create a new environment
+   - Add these variables:
+     ```
+     base_url: http://localhost:3000 (or production URL)
+     x-tenant-id: moradela
+     ```
+   - Save the environment and select it
+
+4. **Authentication**:
+   - After login, copy the access token
+   - In Postman, go to the "Authorization" tab
+   - Select "Bearer Token"
+   - Paste the token in the "Token" field
+
+5. **Making Requests**:
+   - All requests will automatically include:
+     - The `x-tenant-id` header
+     - The Bearer token (if authenticated)
+   - You can now test all API endpoints
 
 ## 🚀 Deployment
 
