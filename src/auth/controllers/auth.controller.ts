@@ -28,7 +28,6 @@ import { plainToClass } from 'class-transformer';
 import { ConfigService } from '@nestjs/config';
 import { Public } from '../decorators/public.decorator';
 
-@Public()
 @ApiTags('Auth')
 @Controller('auth')
 @ApiHeader({
@@ -42,6 +41,7 @@ export class AuthController {
     private readonly cfg: ConfigService,
   ) {}
 
+  @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Register a new user' })
@@ -51,6 +51,7 @@ export class AuthController {
     return user;
   }
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login and receive tokens in cookies' })
@@ -125,6 +126,9 @@ export class AuthController {
     await this.authService.logout(req.user.sub);
     res.clearCookie('Authentication');
     res.clearCookie('Refresh');
-    return 'Logged out';
+
+    return {
+      message: 'Logged out',
+    };
   }
 }

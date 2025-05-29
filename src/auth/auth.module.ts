@@ -19,6 +19,8 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { ResourceAccessGuard } from './guards/resource-access.guard';
+import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { ResourceAccessGuard } from './guards/resource-access.guard';
     PermissionsService,
     JwtStrategy,
     JwtAuthGuard,
+    JwtRefreshStrategy,
+    JwtRefreshGuard,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
