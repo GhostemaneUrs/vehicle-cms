@@ -20,7 +20,12 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { USER_INFO } from '../../auth/decorators/user.decorator';
 import { User } from '../../auth/entities/user.entity';
-import { ApiHeader, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiHeader,
+  ApiNoContentResponse,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { TransferPermissions } from '../../auth/enums/transfer-permissions.enum';
 import { Permissions } from '../../auth/decorators/permission.decorator';
 
@@ -44,6 +49,7 @@ export class TransferController {
     type: [ReadTransferDto],
   })
   async findAll(@USER_INFO() user: User): Promise<ReadTransferDto[]> {
+    console.log('🚀 ~ TransferController ~ findAll ~ user:', user);
     return this.transferService.findAll(user);
   }
 
@@ -67,16 +73,13 @@ export class TransferController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a transfer' })
   @Permissions(TransferPermissions.CREATE)
-  @ApiResponse({
-    status: 201,
-    description: 'Returns the created transfer',
-    type: ReadTransferDto,
-  })
   async create(
     @Body() dto: CreateTransferDto,
     @USER_INFO() user: User,
   ): Promise<ReadTransferDto> {
-    return this.transferService.create(dto, user);
+    const response = await this.transferService.create(dto, user);
+    console.log('🚀 ~ TransferController ~ response:', response);
+    return response;
   }
 
   @Put(':id')
@@ -100,18 +103,8 @@ export class TransferController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete a transfer' })
   @Permissions(TransferPermissions.DELETE)
-  @ApiResponse({
-    status: 200,
-    description: 'Returns the deleted transfer',
-    type: Object,
-    schema: {
-      properties: {
-        message: {
-          type: 'string',
-          description: 'Response message',
-        },
-      },
-    },
+  @ApiNoContentResponse({
+    description: 'Transfer deleted successfully',
   })
   async remove(
     @Param('id', new ParseUUIDPipe()) id: string,

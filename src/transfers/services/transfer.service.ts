@@ -34,6 +34,7 @@ export class TransferService {
     this.vehicleRepository = this.dataSource.getRepository(Vehicle);
     this.projectRepository = this.dataSource.getRepository(Project);
     this.transferRepository = this.dataSource.getRepository(Transfer);
+    this.userRepository = this.dataSource.getRepository(User);
     this.organizationalRepository =
       this.dataSource.getRepository(Organizational);
   }
@@ -125,14 +126,24 @@ export class TransferService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
+      console.log('🚀 ~ TransferService ~ create ~ user:', user);
       const project = await queryRunner.manager.findOne(Project, {
         where: { id: data.projectId },
         relations: ['users', 'organizational'],
       });
 
+      console.log(
+        '🚀 ~ TransferService ~ create ~ project:',
+        project.organizational,
+      );
+      console.log(
+        '🚀 ~ TransferService ~ create ~ project:',
+        !project.users.some((u) => u.id !== user.id),
+      );
+
       if (!project) throw new NotFoundException('Project not found');
 
-      if (!project.users.some((u) => u.id === user.id)) {
+      if (!project.users.some((u) => u.id !== user.id)) {
         throw new ForbiddenException(
           `You are not allowed to create a transfer in this project ${project.name}`,
         );
@@ -140,21 +151,21 @@ export class TransferService {
 
       const organizational = await queryRunner.manager.findOne(Organizational, {
         where: { id: data.organizationalId },
-        relations: ['users'],
+        relations: ['users', 'project'],
       });
 
       if (!organizational)
         throw new NotFoundException('Organizational not found');
 
-      if (!project.organizational.some((o) => o.id === organizational.id)) {
+      if (organizational.project.id !== project.id) {
         throw new ForbiddenException(
-          `You are not allowed to create a transfer in this organizational ${organizational.name}`,
+          `You are not allowed to create a transfer project ${project.name} in this organizational ${organizational.name}`,
         );
       }
 
-      if (!organizational.users.some((u) => u.id === user.id)) {
+      if (!organizational.users.some((u) => u.id !== user.id)) {
         throw new ForbiddenException(
-          `You are not allowed to create a transfer in this organizational ${organizational.name}`,
+          `You are not allowed to create a transfer user ${user.username} in this organizational ${organizational.name}`,
         );
       }
 
@@ -179,6 +190,7 @@ export class TransferService {
       const transfer = new Transfer();
       transfer.type = data.type;
       transfer.vehicle = vehicle;
+
       transfer.client = client;
       transfer.transmitter = transmitter;
       transfer.project = project;
@@ -192,7 +204,7 @@ export class TransferService {
     } catch (error) {
       console.log('🚀 ~ TransferService ~ create ~ error:', error);
       await queryRunner.rollbackTransaction();
-      throw new BadRequestException(error);
+      throw new BadRequestException(error.message);
     } finally {
       await queryRunner.release();
     }
@@ -207,7 +219,7 @@ export class TransferService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
     try {
-      const userInfo = await this.userRepository.findOne({
+      const userInfo = await queryRunner.manager.findOne(User, {
         where: {
           id: user.id,
         },
