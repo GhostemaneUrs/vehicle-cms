@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { OrganizationalService } from '../services/organizational.service';
 import {
+  AssignUserDto,
   CreateOrganizationalDto,
   ReadOrganizationalDto,
   UpdateOrganizationalDto,
@@ -37,25 +38,38 @@ export class OrganizationalController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Get all organizational units' })
-  @ResourceAccess({ projectProp: 'id' })
+  @ResourceAccess({ projectProp: 'projectId' })
   @ApiResponse({
     status: 200,
     description: 'Returns all organizational units',
     type: [ReadOrganizationalDto],
   })
-  async findAll(
-    @Query('projectId') projectId: string,
+  async findAll(): Promise<ReadOrganizationalDto[]> {
+    return this.organizationalService.findAll();
+  }
+
+  @Get('project/:projectId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Get all organizational by project id' })
+  @ResourceAccess({ projectProp: 'projectId' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns all organizationals',
+    type: [ReadOrganizationalDto],
+  })
+  async findAllByProjectId(
+    @Param('projectId') projectId: string,
   ): Promise<ReadOrganizationalDto[]> {
-    return this.organizationalService.findAll(projectId);
+    return this.organizationalService.findAllByProjectId(projectId);
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Get an organizational unit by id' })
+  @ApiOperation({ summary: 'Get an organizational by id' })
   @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
-    description: 'Returns an organizational unit',
+    description: 'Returns an organizational',
     type: ReadOrganizationalDto,
   })
   async findOne(@Param('id') id: string): Promise<ReadOrganizationalDto> {
@@ -64,11 +78,11 @@ export class OrganizationalController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Create an organizational unit' })
-  @ResourceAccess({ projectProp: 'id' })
+  @ApiOperation({ summary: 'Create an organizational ' })
+  @ResourceAccess({ projectProp: 'projectId' })
   @ApiResponse({
     status: 201,
-    description: 'Returns the created organizational unit',
+    description: 'Returns the created organizational ',
     type: ReadOrganizationalDto,
   })
   async create(
@@ -80,11 +94,11 @@ export class OrganizationalController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update an organizational unit' })
+  @ApiOperation({ summary: 'Update an organizational ' })
   @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
-    description: 'Returns the updated organizational unit',
+    description: 'Returns the updated organizational ',
     type: ReadOrganizationalDto,
   })
   async update(
@@ -97,12 +111,11 @@ export class OrganizationalController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Delete an organizational unit' })
+  @ApiOperation({ summary: 'Delete an organizational ' })
   @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
-    description:
-      'Returns a message indicating the organizational unit was deleted',
+    description: 'Returns a message indicating the organizational  was deleted',
     type: Object,
     schema: {
       properties: {
@@ -122,12 +135,12 @@ export class OrganizationalController {
 
   @Post(':id/users')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Assign a user to an organizational unit' })
+  @ApiOperation({ summary: 'Assign a user to an organizational' })
   @ResourceAccess({ organizationalProp: 'id' })
   @ApiResponse({
     status: 200,
     description:
-      'Returns a message indicating the user was assigned to the organizational unit',
+      'Returns a message indicating the user was assigned to the organizational ',
     type: Object,
     schema: {
       properties: {
@@ -140,8 +153,8 @@ export class OrganizationalController {
   })
   async assignUser(
     @Param('id') id: string,
-    @Body('userId') userId: string,
+    @Body() data: AssignUserDto,
   ): Promise<{ message: string }> {
-    return this.organizationalService.assignUser(id, userId);
+    return this.organizationalService.assignUser(id, data);
   }
 }

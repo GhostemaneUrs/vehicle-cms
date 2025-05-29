@@ -6,6 +6,7 @@ import {
   ManyToMany,
   OneToMany,
   Index,
+  JoinColumn,
 } from 'typeorm';
 import { Project } from '../../projects/entities/project.entity';
 import { User } from '../../auth/entities/user.entity';
@@ -26,6 +27,7 @@ export class Organizational {
   @ManyToOne(() => Project, (project) => project.organizational, {
     onDelete: 'CASCADE',
   })
+  @JoinColumn({ name: 'project_id' })
   project: Project;
 
   @ManyToMany(() => User, (user) => user.organizational)

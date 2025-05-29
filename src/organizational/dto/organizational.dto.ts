@@ -2,7 +2,7 @@ import { ApiProperty, PartialType } from '@nestjs/swagger';
 import { ReadProjectDto } from '../../projects/dto/project.dto';
 import { ReadUserDto } from '../../auth/dtos/user.dto';
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsUUID } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
 @Exclude()
 export class ReadOrganizationalDto {
@@ -27,6 +27,7 @@ export class ReadOrganizationalDto {
 
 export class CreateOrganizationalDto {
   @ApiProperty({ description: 'Organizational name' })
+  @IsString()
   name: string;
 
   @ApiProperty({ description: 'Organizational project' })
@@ -40,4 +41,10 @@ export class UpdateOrganizationalDto extends PartialType(
   @ApiProperty({ description: 'Organizational id' })
   @IsUUID()
   id: string;
+}
+
+export class AssignUserDto {
+  @ApiProperty({ description: 'User id' })
+  @IsUUID()
+  userId: string;
 }

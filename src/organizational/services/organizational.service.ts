@@ -11,6 +11,7 @@ import { Project } from '../../projects/entities/project.entity';
 import { TENANT_CONNECTION } from '../../database/common/database.tokens';
 import { User } from '../../auth/entities/user.entity';
 import {
+  AssignUserDto,
   CreateOrganizationalDto,
   ReadOrganizationalDto,
   UpdateOrganizationalDto,
@@ -29,7 +30,23 @@ export class OrganizationalService {
       this.dataSource.getRepository(Organizational);
   }
 
-  async findAll(projectId: string): Promise<ReadOrganizationalDto[]> {
+  async findAll(): Promise<ReadOrganizationalDto[]> {
+    try {
+      const organizational = await this.organizationalRepository.find({
+        relations: ['project'],
+      });
+
+      return organizational.map((organizational) =>
+        plainToClass(ReadOrganizationalDto, organizational),
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async findAllByProjectId(
+    projectId: string,
+  ): Promise<ReadOrganizationalDto[]> {
     try {
       const organizational = await this.organizationalRepository.find({
         where: {
@@ -44,7 +61,6 @@ export class OrganizationalService {
         plainToClass(ReadOrganizationalDto, organizational),
       );
     } catch (error) {
-      console.log('🚀 ~ OrganizationalService ~ findAll ~ error:', error);
       throw new BadRequestException(error.message);
     }
   }
@@ -79,15 +95,15 @@ export class OrganizationalService {
         where: { id: data.projectId },
         relations: ['organizational'],
       });
+      console.log('🚀 ~ OrganizationalService ~ project:', project);
 
       if (!project) throw new NotFoundException('Project not found');
 
-      const existingOrganizational = queryRunner.manager.findOne(
+      const existingOrganizational = await queryRunner.manager.findOne(
         Organizational,
         {
           where: {
             name: data.name,
-            project: { id: data.projectId },
           },
         },
       );
@@ -101,12 +117,14 @@ export class OrganizationalService {
       const organizational = new Organizational();
       organizational.name = data.name;
       organizational.project = project;
-      organizational.users = [user];
 
-      await queryRunner.manager.save(organizational);
+      const saved = await queryRunner.manager.save(organizational);
+
+      saved.users = [user];
+      await queryRunner.manager.save(saved);
       await queryRunner.commitTransaction();
 
-      return plainToClass(ReadOrganizationalDto, organizational);
+      return plainToClass(ReadOrganizationalDto, saved);
     } catch (error) {
       console.log('🚀 ~ OrganizationalService ~ create ~ error:', error);
       await queryRunner.rollbackTransaction();
@@ -150,6 +168,18 @@ export class OrganizationalService {
         }
       }
 
+      if (data.projectId) {
+        const project = await queryRunner.manager.findOne(Project, {
+          where: { id: data.projectId },
+        });
+
+        if (!project) throw new NotFoundException('Project not found');
+
+        if (data.projectId !== organizational.project.id) {
+          organizational.project = project;
+        }
+      }
+
       await queryRunner.manager.save(organizational);
       await queryRunner.commitTransaction();
 
@@ -189,12 +219,16 @@ export class OrganizationalService {
     }
   }
 
-  async assignUser(id: string, userId: string): Promise<{ message: string }> {
+  async assignUser(
+    id: string,
+    data: AssignUserDto,
+  ): Promise<{ message: string }> {
     const queryRunner: QueryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      const { userId } = data;
       const organizational = await this.organizationalRepository.findOne({
         where: { id },
         relations: ['project', 'project.users', 'users'],
