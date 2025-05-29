@@ -7,6 +7,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main.js",
+    "db:generate": "ts-node -r tsconfig-paths/register src/database/scripts/generate-migrations.ts",
     "db:migrate": "ts-node -r tsconfig-paths/register src/database/scripts/migrate.ts up",
     "db:rollback": "ts-node -r tsconfig-paths/register src/database/scripts/migrate.ts down",
     "db:seed-tenancy": "ts-node -r tsconfig-paths/register src/seeds/seed-tenancy.ts",
