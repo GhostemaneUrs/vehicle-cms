@@ -272,6 +272,22 @@ The application is deployed on Render. You can access the production API at:
 https://vehicle-cms.onrender.com
 ```
 
+> **Note**: The production environment already has a tenant configured with the name "moradela". This tenant is fully set up with:
+> - All necessary database migrations
+> - Required seed data (roles and permissions)
+> - Ready to use for testing the API
+> 
+> You can start making requests to the API using this tenant immediately.
+
+### Example API Request
+
+```bash
+# List all tenants
+curl -X 'GET' \
+  'https://vehicle-cms.onrender.com/tenancy' \
+  -H 'accept: application/json'
+```
+
 ## 🎯 Best Practices
 
 1. **Code**:
